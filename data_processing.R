@@ -147,11 +147,8 @@ khab_mixed_old <- read.dbf("input/matched_mixed_properties/khab_mix_BACI_old.dbf
 # input/analysis_data/matched_mixed_RIDs.rds
 # input/analysis_data/matched_mixed_RIDs_old.rds
 # These are the RIDs for Courtney’s matched and mixed samples – with the CI variable also included in the match data (use this for the CI variable – already switched the 0s and 1s so not need to do that).
-
-
 #WOODY MATCHED
 woody_matched <- data.frame()
-
 RID_repeated <- rep(matched_mixed_RIDs$woody_matched[,1], each = 11)
 RID_rep <- unlist(RID_repeated, use.names = FALSE)
 CI_repeated <- rep(matched_mixed_RIDs$woody_matched[,2], each = 11)
@@ -229,8 +226,6 @@ for (x in unique(woody_matched$RID)) {
 }
 
 write_rds(woody_matched, "input/joined_data_frames/woody_matched_df.rds")
-
-
 
 # #WOODY MIXED --> Courtney's RIDs
 # woody_mixed <- data.frame()
@@ -320,7 +315,7 @@ woody_mixed$time <- time_repeated
 woody_mixed$baseline <- NA
 not_in_zonal <- c()
 # Iterate through each row using a for loop
-for (i in 1:nrow(woody_mixed)) {
+for (i in 3000633:nrow(woody_mixed)) {
   row <- woody_mixed[i, ]  # Access current row
   # Check if RID exists in zonal_woody_treat
   if (row$RID %in% zonal_woody_treat$RID) {
