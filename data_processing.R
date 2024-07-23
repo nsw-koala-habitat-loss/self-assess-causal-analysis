@@ -9,22 +9,26 @@ library(exactextractr)
 # read functions
 source("functions.R")
 
-# do some data preprocessing
-
-#Set working directory
-# Set the working directory
-setwd("R:/nsw_habitat_loss/for_brooke")
+# get some data
 
 # read in woody vegetation extent data for 2011
 woody <- rast(paste(getwd(), "/input/woody_cover/woody_nsw_2011.tif", sep = "")) %>% round()
 woody_mask <- woody %>% classify(cbind(c(0, 1), c(NA, 1)))
 
+# read in properties
+props <- vect("input/properties/Property_EPSG4283.gdb", layer = "property") %>% project("EPSG:3308") %>% as_sf()
+
+# do some data preprocessing
+
 # read in nvr data, reclassify for treatment (category 1 and category 2 regulated) and control (category 2 - vulnerable and sensitive) then aggregate, reproject, and snap to woody cover layer
 nvr_incl <- rast(paste(getwd(), "/input/nvr_mapping/naluma_nsw_2017_abel0_c20221212_u9.tif", sep = "")) %>% aggregate(5, fun = "modal") %>% round() %>% classify(cbind(c(NA, 1), c(1, NA))) %>% project(woody)
+gc()
 # get treatment layer (1 = treatment, 0 = control)
 nvr_treat <- rast(paste(getwd(), "/input/nvr_mapping/naluma_nsw_2017_abkl0_c20221212_u9.tif", sep = "")) %>% aggregate(5, fun = "modal") %>% round() %>% classify(cbind(c(NA, 3, 4, 5, 6), c(1, 0, 0, NA, 0))) %>% project(woody)
+gc()
 # get control layer (1 = control, 0 = treatment)
 nvr_contr <- rast(paste(getwd(), "/input/nvr_mapping/naluma_nsw_2017_abkl0_c20221212_u9.tif", sep = "")) %>% aggregate(5, fun = "modal") %>% round() %>% classify(cbind(c(NA, 3, 4, 5, 6), c(0, 1, 1, NA, 1))) %>% project(woody)
+gc()
 
 # generate include layer
 # multiply by the woody layer as we only care about raster cells that were woody in 2011
@@ -39,26 +43,31 @@ control <- control %>% round()
 rm(nvr_incl, nvr_treat, nvr_contr)
 gc()
 
-# read in properties
-props <- vect("input/properties/Property_EPSG4283.gdb", layer = "property") %>% project("EPSG:3308") %>% as_sf()
-
-# calculate whether cells have at least one raster cell that is subject to the LLS Act
-props_zinclude <- include %>% exact_extract(props, "max") %>% as_tibble() %>% rename(include = value)
+# calculate whether properties have at least one raster cell that is subject to the LLS Act
+props_lls <- include %>% exact_extract(props, "max") %>% as_tibble() %>% rename(include = value)
 
 # bind zonal values to properties
-props <- cbind(props, props_zinclude)
+props <- cbind(props, props_lls)
 
-# remove properties that are not inside the LLS region
+# remove properties that are not inside the LLS region and don't contain woody vegetation
+props_incl <- props %>% filter(!is.na(include))
+
+# remove duplicates (i.e., those RIDs with the same propid)
 # only keep the RID field
-props_incl <- props %>% filter(!is.na(include)) %>% select(RID)
+duplicates <- duplicated(props_incl$propid)
+props_incl <- props_incl %>% filter(!duplicates) %>% select(RID, propid)
 
 # save properties to shapefile
 st_write(props_incl, "input/analysis_data/props_incl.shp", append = FALSE)
 
+# free up memory
+rm(props_lls)
+rm(props)
+gc()
+
 # read in koala habitat data and reclassify so 1 = koala habitat, 0 = non-habitat then aggregate, reproject, and snap to woody cover layer
 # then aggregate, reproject, and snap to woody cover layer
 khab <- rast(paste(getwd(), "/input/koala_habitat/KoalaHabitatSuitabilityModelClasses.tif", sep = "")) %>% aggregate(5, fun = "modal") %>% round() %>% classify(cbind(c(1, 2, 3, 4, 5, 6), c(0, 0, 0, 1, 1, 1))) %>% project(woody)
-gc()
 
 # set up tibble to hold results of zonal analysis
 zonal_woody_treat <- as_tibble(props_incl) %>% select(RID)
@@ -106,43 +115,106 @@ write_rds(zonal_woody_contr, "input/analysis_data/woody_contr_zonal.rds")
 write_rds(zonal_koala_treat, "input/analysis_data/koala_treat_zonal.rds")
 write_rds(zonal_koala_contr, "input/analysis_data/koala_contr_zonal.rds")
 
-# get the matched and mixed data samples
-
-# current samples
-# note here we switch the CI coding as it is the wrong way around - NEED TO CHECK
-woody_matched <- as_tibble(read.dbf("input/matched_mixed_properties/match_BACI.dbf")) %>% group_by(RID) %>% summarise(CI = mean(CI)) %>% mutate(CI = ifelse(CI == 0, 1, 0), CI = as.integer(CI)) 
-# note here we switch the CI coding as it is the wrong way around - NEED TO CHECK
-khab_matched <- as_tibble(read.dbf("input/matched_mixed_properties/khab_match_BACI.dbf")) %>% group_by(RID) %>% summarise(CI = mean(CI)) %>% mutate(CI = ifelse(CI == 0, 1, 0), CI = as.integer(CI)) 
-woody_mixed <- unique(as_tibble(read.dbf("input/matched_mixed_properties/mixed_BACI.dbf")) %>% select(RID)) %>% as_tibble() %>% mutate(RID = as.integer(RID)) 
-khab_mixed <- unique(as_tibble(read.dbf("input/matched_mixed_properties/khab_mix_BACI.dbf")) %>% select(RID)) %>% as_tibble() %>% mutate(RID = as.integer(RID)) 
-
-# old samples
-woody_matched_old <- as_tibble(read.dbf("input/matched_mixed_properties/match_BACI_old.dbf")) %>% group_by(RID) %>% summarise(CI = mean(CI)) %>% mutate(CI = as.integer(CI)) 
-khab_matched_old <- as_tibble(read.dbf("input/matched_mixed_properties/khab_match_BACI_old.dbf")) %>% group_by(RID) %>% summarise(CI = mean(CI)) %>% mutate(CI = as.integer(CI)) 
-woody_mixed_old <- unique(as_tibble(read.dbf("input/matched_mixed_properties/mixed_BACI_old.dbf")) %>% select(RID)) %>% as_tibble() %>% mutate(RID = as.integer(RID)) 
-khab_mixed_old <- unique(as_tibble(read.dbf("input/matched_mixed_properties/khab_mix_BACI_old.dbf")) %>% select(RID)) %>% as_tibble() %>% mutate(RID = as.integer(RID)) 
-
-# compile into a list and save
-matched_mixed_RIDs <- list(woody_matched = woody_matched, khab_matched = khab_matched, woody_mixed = woody_mixed, khab_mixed = khab_mixed)
-matched_mixed_RIDs_old <- list(woody_matched = woody_matched_old, khab_matched = khab_matched_old, woody_mixed = woody_mixed_old, khab_mixed = khab_mixed_old)
-write_rds(matched_mixed_RIDs, "input/analysis_data/matched_mixed_RIDs.rds")
-write_rds(matched_mixed_RIDs_old, "input/analysis_data/matched_mixed_RIDs_old.rds")
-
-# load processed data back in if needed
+# load processed data back in if needed - comment out if not needed
 zonal_woody_treat <- read_rds("input/analysis_data/woody_treat_zonal.rds")
 zonal_woody_contr  <- read_rds("input/analysis_data/woody_contr_zonal.rds")
 zonal_koala_treat <- read_rds("input/analysis_data/koala_treat_zonal.rds")
 zonal_koala_contr <- read_rds("input/analysis_data/koala_contr_zonal.rds")
-matched_mixed_RIDs <- read_rds("input/analysis_data/matched_mixed_RIDs.rds")
-matched_mixed_RIDs_old <- read_rds("input/analysis_data/matched_mixed_RIDs_old.rds")
+props_incl <- vect("input/analysis_data/props_incl.shp")
+woody <- rast(paste(getwd(), "/input/woody_cover/woody_nsw_2011.tif", sep = "")) %>% round()
+khab <- rast(paste(getwd(), "/input/koala_habitat/KoalaHabitatSuitabilityModelClasses.tif", sep = "")) %>% aggregate(5, fun = "modal") %>% round() %>% classify(cbind(c(1, 2, 3, 4, 5, 6), c(0, 0, 0, 1, 1, 1))) %>% project(woody)
 
-woody_matched_old <- read.dbf("input/matched_mixed_properties/match_BACI_old.dbf")
-khab_matched_old <- read.dbf("input/matched_mixed_properties/khab_match_BACI_old.dbf")
-woody_mixed_old <- read.dbf("input/matched_mixed_properties/mixed_BACI_old.dbf")
-khab_mixed_old <- read.dbf("input/matched_mixed_properties/khab_mix_BACI_old.dbf")
+# get only the koala habitat that is woody vegetation
+khab_woody <- khab * woody
 
+# calculate area, join to properties spatial layer, and then convert to a tibble
+props_incl_spvec <- props_incl %>% vect()
+props_incl_tibble <- props_incl %>% as_tibble() %>% mutate(AREA = expanse(props_incl_spvec, unit = "ha", transform = TRUE))
+rm(props_incl_spvec)
+gc()
+
+# get land value and join to properties spatial layer
+lval <- read.dbf("input/land_value/Prop_value_ha_20230101.dbf") %>% as_tibble()
+props_incl_tibble <- props_incl_tibble %>% left_join(lval, by = c("propid" = "PROPERTY_I")) %>% rename(AREA = AREA.x, LVALHA = value_ha)
+rm(lval)
+gc()
+
+# get slope
+dem <- rast(paste(getwd(), "/input/dem/lf_dem1sec_noExclusions_noNegValues.tif",sep = ""))
+slope <- terrain(dem, "slope") %>% project(woody)
+rm(dem)
+gc()
+slope_zone <- slope %>% exact_extract(props_incl, "mean")
+props_incl_tibble <- bind_cols(props_incl_tibble, as_tibble(slope_zone) %>% rename(SLOPE = value))
+rm(slope)
+gc()
+
+# get soil fertility
+soil_fert <- vect("input/soil/Fertility_NSW_v4_5_211020.shp") %>% project("EPSG:3308") %>% rasterize(woody, field = "Fert_code") %>% round()
+soil_fert_zone <- soil_fert %>% exact_extract(props_incl, "mode")
+props_incl_tibble <- bind_cols(props_incl_tibble, as_tibble(soil_fert_zone) %>% rename(SFERT = value))
+rm(soil_fert)
+gc()
+
+# get land-use
+land_use <- vect("input/landuse/NSWLanduse_2007shp.shp") %>% project("EPSG:3308") %>% rasterize(woody, field = "LU_NSWMajo")
+land_use_zone <- land_use %>% exact_extract(props_incl, "mode")
+props_incl_tibble <- bind_cols(props_incl_tibble, as_tibble(land_use_zone) %>% rename(LUSE = value))
+rm(land_use)
+gc()
+
+# get proportion of property that is woody vegetation and koala habitat
+count_woody_zone <- woody %>% exact_extract(props_incl, "count")
+count_khab_zone <- khab_woody %>% exact_extract(props_incl, "count")
+sum_woody_zone <- woody %>% exact_extract(props_incl, "sum")
+sum_khab_zone <- khab_woody %>% exact_extract(props_incl, "sum")
+prop_woody_zone <- sum_woody_zone / count_woody_zone
+prop_khab_zone <- sum_khab_zone / count_khab_zone
+props_incl_tibble <- bind_cols(props_incl_tibble, as_tibble(prop_woody_zone) %>% rename(PWOODY = value))
+props_incl_tibble <- bind_cols(props_incl_tibble, as_tibble(prop_khab_zone) %>% rename(PKHAB = value))
+
+props_incl_tibble_final <- props_incl_tibble %>% select(RID, propid, AREA, LVALHA, SLOPE, SFERT, LUSE, PWOODY, PKHAB)
+
+# replace soil fertility values of 98 and 99 with NA values
+props_incl_tibble_final <- props_incl_tibble_final %>% mutate(SFERT = ifelse(SFERT == 98 | SFERT == 99, NA, SFERT))
+
+# replace koala habitat proportion values of NaN with NA values
+props_incl_tibble_final <- props_incl_tibble_final %>% mutate(PKHAB = ifelse(is.na(PKHAB), NA, PKHAB))
+
+# make SFERT and LUSE factors
+props_incl_tibble_final <- props_incl_tibble_final %>% mutate(SFERT = as.factor(SFERT), LUSE = as.factor(LUSE))
+
+# save output
+write_rds(props_incl_tibble_final, "input/analysis_data/props_incl_table_covariates.rds")
+
+# now get the data to do the matching
+# matched based on property area, slope, land lavue, soil fertility, land used and woody vegetation/koala habitat percentage
+
+# find RIDs needed for the matched samples
+# woody
+matchingRIDs_woody_treat <- zonal_woody_treat %>% select(RID, baseline) %>% rename(baseline_treat = baseline)
+matchingRIDs_woody_contr <- zonal_woody_contr %>% select(RID, baseline) %>% rename(baseline_contr = baseline)
+matchingRIDs_woody <- matchingRIDs_woody_treat %>% left_join(matchingRIDs_woody_contr, by = ("RID")) %>% filter((baseline_treat > 0 & baseline_contr == 0) | (baseline_treat == 0 & baseline_contr > 0)) %>% mutate(CI = ifelse(baseline_treat > 0 & baseline_contr == 0, 1, 0))
+matchingRIDs_woody <- matchingRIDs_woody %>% mutate(baseline = baseline_treat + baseline_contr) %>% select(-baseline_treat, -baseline_contr)
+# koala habitat
+matchingRIDs_koala_treat <- zonal_koala_treat %>% select(RID, baseline) %>% rename(baseline_treat = baseline)
+matchingRIDs_koala_contr <- zonal_koala_contr %>% select(RID, baseline) %>% rename(baseline_contr = baseline)
+matchingRIDs_koala <- matchingRIDs_koala_treat %>% left_join(matchingRIDs_koala_contr, by = ("RID")) %>% filter((baseline_treat > 0 & baseline_contr == 0) | (baseline_treat == 0 & baseline_contr > 0)) %>% mutate(CI = ifelse(baseline_treat > 0 & baseline_contr == 0, 1, 0))
+matchingRIDs_koala <- matchingRIDs_koala %>% mutate(baseline = baseline_treat + baseline_contr) %>% select(-baseline_treat, -baseline_contr)
+
+# then join to the RIDs for matching
+# and remove any rows with NA values
+matchingRIDs_woody <- matchingRIDs_woody %>% left_join(props_incl_tibble_final, by = "RID") %>% select(-baseline, -propid, -PKHAB) %>% mutate(CI = as.integer(CI)) %>% drop_na()
+matchingRIDs_koala <- matchingRIDs_koala %>% left_join(props_incl_tibble_final, by = "RID") %>% select(-baseline, -propid, PWOODY) %>% mutate(CI = as.integer(CI)) %>% drop_na()
+
+# save matching pools
+write_rds(matchingRIDs_woody, "input/analysis_data/matching_pool_woody.rds")
+write_rds(matchingRIDs_koala, "input/analysis_data/matching_pool_koala.rds")
+write.dbf(as.data.frame(matchingRIDs_woody), "input/analysis_data/matching_pool_woody.dbf")
+write.dbf(as.data.frame(matchingRIDs_koala), "input/analysis_data/matching_pool_koala.dbf")
 
 # BROOKE TO WRITE CODE HERE TO GENERATE THE DATA FOR INPUT INTO THE STATISTICAL MODELS
+
 #These are the files:
 # input/analysis_data/matched_mixed_RIDs.rds
 # input/analysis_data/matched_mixed_RIDs_old.rds
