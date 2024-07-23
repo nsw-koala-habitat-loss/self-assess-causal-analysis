@@ -367,6 +367,20 @@ write_rds(woody_matched, "input/joined_data_frames/woody_matched_df.rds")
 # write_rds(woody_mixed, "input/joined_data_frames/woody_mixed_df_cm.rds")
 
 #WOODY MIXED --> Jonathan's RIDs
+# Transforming any value greater than 0 to 1 in the 'baseline' column of zonal_woody_treat
+zonal_woody_treat$test <- ifelse(zonal_woody_treat$baseline > 0, 1, zonal_woody_treat$baseline)
+zonal_woody_contr$test <- ifelse(zonal_woody_contr$baseline > 0, 1, zonal_woody_contr$baseline)
+rows <- zonal_woody_treat$test+zonal_woody_contr$test
+zonal_woody_treat_subset <- zonal_woody_treat[which(rows == 2),]
+zonal_woody_contr_subset <- zonal_woody_contr[which(rows == 2),]
+
+# Remove the last column
+zonal_woody_treat_subset <- zonal_woody_treat_subset[, -ncol(zonal_woody_treat_subset)]
+zonal_woody_contr_subset <- zonal_woody_contr_subset[, -ncol(zonal_woody_contr_subset)]
+
+zonal_woody_treat <- zonal_woody_treat_subset
+zonal_woody_contr <- zonal_woody_contr_subset
+
 woody_mixed <- data.frame()
 RID_repeated <- rep(zonal_woody_treat$RID, each = 22)
 RID_rep <- unlist(RID_repeated, use.names = FALSE)
@@ -387,7 +401,7 @@ woody_mixed$time <- time_repeated
 woody_mixed$baseline <- NA
 not_in_zonal <- c()
 # Iterate through each row using a for loop
-for (i in 3000633:nrow(woody_mixed)) {
+for (i in 338124:nrow(woody_mixed)) {
   row <- woody_mixed[i, ]  # Access current row
   # Check if RID exists in zonal_woody_treat
   if (row$RID %in% zonal_woody_treat$RID) {
@@ -410,6 +424,7 @@ for (i in 3000633:nrow(woody_mixed)) {
     not_in_zonal <- c(not_in_zonal, row$RID)
   }
 }
+
 write_rds(woody_mixed, "input/joined_data_frames/woody_mixed_df_baseline_only.rds")
 # Remove duplicates
 unique_not_in_zonal <- unique(not_in_zonal)
@@ -523,18 +538,26 @@ write_rds(khab_matched, "input/joined_data_frames/khab_matched_df.rds")
 
 
 #KHAB MIXED
-khab_mixed <- data.frame(
-  RID = matched_mixed_RIDs$khab_mixed[,1]
-)
+# Transforming any value greater than 0 to 1 in the 'baseline' column of zonal_woody_treat
+zonal_koala_treat$test <- ifelse(zonal_koala_treat$baseline > 0, 1, zonal_koala_treat$baseline)
+zonal_koala_contr$test <- ifelse(zonal_koala_contr$baseline > 0, 1, zonal_koala_contr$baseline)
+rows <- zonal_koala_treat$test+zonal_koala_contr$test
+zonal_koala_treat_subset <- zonal_koala_treat[which(rows == 2),]
+zonal_koala_contr_subset <- zonal_koala_contr[which(rows == 2),]
+# Remove the last column
+zonal_koala_treat_subset <- zonal_koala_treat_subset[, -ncol(zonal_koala_treat_subset)]
+zonal_koala_contr_subset <- zonal_koala_contr_subset[, -ncol(zonal_koala_contr_subset)]
 
+zonal_koala_treat <- zonal_koala_treat_subset
+zonal_koala_contr <- zonal_koala_contr_subset
 
-
+#Build dataframe
 khab_mixed <- data.frame()
-RID_repeated <- rep(matched_mixed_RIDs$khab_mixed[,1], each = 22)
+RID_repeated <- rep(zonal_koala_treat$RID, each = 22)
 RID_rep <- unlist(RID_repeated, use.names = FALSE)
 # Create a vector with 11 ones followed by 11 zeros
 vector_ones_zeros <- c(rep(1, 11), rep(0, 11))
-CI_repeated <- rep(vector_ones_zeros, each = nrow(matched_mixed_RIDs$khab_mixed[,1]))
+CI_repeated <- rep(vector_ones_zeros, length(zonal_koala_treat$RID))
 CI_rep <- unlist(CI_repeated, use.names = FALSE)
 
 # Add columns RID and CI from matched_mixed_RIDs to woody_matched
@@ -550,12 +573,10 @@ time_repeated <- rep(c(-4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6), ((length(unique(kha
 khab_mixed$time <- time_repeated
 khab_mixed$baseline <- NA
 
-zonal_woody_treat
-zonal_woody_contr
-
+#Adding baseline values
 not_in_zonal <- c()
 # Iterate through each row using a for loop
-for (i in 1600679:nrow(khab_mixed)) {
+for (i in 1:nrow(khab_mixed)) {
   row <- khab_mixed[i, ]  # Access current row
   # Check if RID exists in zonal_woody_treat
   if (row$RID %in% zonal_woody_treat$RID) {
@@ -591,7 +612,7 @@ khab_mixed <- khab_mixed %>%
 #Add loss values
 khab_mixed$loss <- NA
 
-#x <- 167
+#Adding loss values
 for (x in unique(khab_mixed$RID)) {
   row <- khab_mixed %>% filter(RID == x)
   subset_zonal_treat <- zonal_woody_treat %>% filter(RID == x)
