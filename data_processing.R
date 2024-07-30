@@ -219,11 +219,23 @@ write.dbf(as.data.frame(matchingRIDs_koala), "input/analysis_data/matching_pool_
 # input/analysis_data/matched_mixed_RIDs.rds
 # input/analysis_data/matched_mixed_RIDs_old.rds
 # These are the RIDs for Courtney’s matched and mixed samples – with the CI variable also included in the match data (use this for the CI variable – already switched the 0s and 1s so not need to do that).
+#U:\Research\Projects\sef\gbl_conserv_sustain\nsw_habitat_loss\for_brooke\input\analysis_data. The two files are called “matched_samples_woody.dbf” and “matched_samples_koala.dbf”. 
+setwd("R:\nsw_habitat_loss\for_brooke")
+
+#Load data
+matched_samples_woody <- read.dbf("R:/nsw_habitat_loss/for_brooke/input/analysis_data/matched_samples_woody.dbf")
+matched_samples_koala <- read.dbf("R:/nsw_habitat_loss/for_brooke/input/analysis_data/matched_samples_koala.dbf")
+
+zonal_woody_treat <- read_rds("R:/nsw_habitat_loss/for_brooke/input/analysis_data/woody_treat_zonal.rds")
+zonal_woody_contr  <- read_rds("R:/nsw_habitat_loss/for_brooke/input/analysis_data/woody_contr_zonal.rds")
+zonal_koala_treat <- read_rds("R:/nsw_habitat_loss/for_brooke/input/analysis_data/koala_treat_zonal.rds")
+zonal_koala_contr <- read_rds("R:/nsw_habitat_loss/for_brooke/input/analysis_data/koala_contr_zonal.rds")
+
 #WOODY MATCHED
 woody_matched <- data.frame()
-RID_repeated <- rep(matched_mixed_RIDs$woody_matched[,1], each = 11)
+RID_repeated <- rep(matched_samples_woody$RID, each = 11)
 RID_rep <- unlist(RID_repeated, use.names = FALSE)
-CI_repeated <- rep(matched_mixed_RIDs$woody_matched[,2], each = 11)
+CI_repeated <- rep(matched_samples_woody$CI, each = 11)
 CI_rep <- unlist(CI_repeated, use.names = FALSE)
 
 # Add columns RID and CI from matched_mixed_RIDs to woody_matched
@@ -297,74 +309,8 @@ for (x in unique(woody_matched$RID)) {
     }
 }
 
-write_rds(woody_matched, "input/joined_data_frames/woody_matched_df.rds")
+write_rds(woody_matched, "R:/nsw_habitat_loss/for_brooke/input/joined_data_frames/woody_matched_df.rds")
 
-# #WOODY MIXED --> Courtney's RIDs
-# woody_mixed <- data.frame()
-# RID_repeated <- rep(matched_mixed_RIDs$woody_mixed[,1], each = 22)
-# RID_rep <- unlist(RID_repeated, use.names = FALSE)
-# # Create a vector with 11 ones followed by 11 zeros
-# vector_ones_zeros <- c(rep(1, 11), rep(0, 11))
-# CI_repeated <- rep(vector_ones_zeros, each = nrow(matched_mixed_RIDs$woody_mixed[,1]))
-# CI_rep <- unlist(CI_repeated, use.names = FALSE)
-# # Add columns RID and CI from matched_mixed_RIDs to woody_matched
-# woody_mixed <- data.frame(
-#   RID = RID_rep,
-#   CI = CI_rep, 
-#   time = NA
-# )
-# # Order the dataframe by the RID column
-# woody_mixed <- woody_mixed[order(woody_mixed$RID), ]
-# time_repeated <- rep(c(-4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6), ((length(unique(woody_mixed$RID)))*2))
-# woody_mixed$time <- time_repeated
-# woody_mixed$baseline <- NA
-# not_in_zonal <- c()
-# # Iterate through each row using a for loop
-# for (i in 1:nrow(woody_mixed)) {
-#   row <- woody_mixed[i, ]  # Access current row
-#   # Check if RID exists in zonal_woody_treat
-#   if (row$RID %in% zonal_woody_treat$RID) {
-#     # Perform actions if RID exist
-#     # Check if CI column value is 1
-#     if (row$CI == 1) {
-#       row_treat <- zonal_woody_treat %>%
-#         filter(RID == row$RID)
-#       woody_mixed[i, 4] <- row_treat$baseline 
-#       # Add your actions here
-#     } else {
-#       row_contr <- zonal_woody_contr %>%
-#         filter(RID == row$RID)
-#       woody_mixed[i, 4] <- row_contr$baseline
-#     }
-#     # Perform operations on the row
-#   } else {
-#     #print(row$RID)
-#     # Perform actions if RID does not exist (optional)
-#     not_in_zonal <- c(not_in_zonal, row$RID)
-#   }
-# }
-# write_rds(woody_mixed, "input/joined_data_frames/woody_mixed_df_baseline_only.rds")
-# # Remove duplicates
-# unique_not_in_zonal <- unique(not_in_zonal)
-# write_rds(unique_not_in_zonal, "input/joined_data_frames/unique_not_in_zonal_woody_mixed.rds")
-# # Remove rows where RID matches values in unique_not_in_zonal
-# woody_mixed <- woody_mixed %>%
-#   filter(!RID %in% unique_not_in_zonal)
-# #Add loss values
-# woody_mixed$loss <- NA
-# #x <- 167
-# for (x in unique(woody_mixed$RID)) {
-#   row <- woody_mixed %>% filter(RID == x)
-#   subset_zonal_woody <- zonal_woody_treat %>% filter(RID == x)
-#   # Extract numerical values from the last 11 columns into a vector
-#   last_11_values_treat <- as.vector(unlist(subset_zonal_woody[, -c(1:2)]))
-#   subset_zonal_contr <- zonal_woody_contr %>% filter(RID == x)
-#   # Extract numerical values from the last 11 columns into a vector
-#   last_11_values_contr <- as.vector(unlist(subset_zonal_contr[, -c(1:2)]))
-#   joined <- c(last_11_values_treat, last_11_values_contr)
-#   woody_mixed$loss[woody_mixed$RID == x] <- joined
-#   }
-# write_rds(woody_mixed, "input/joined_data_frames/woody_mixed_df_cm.rds")
 
 #WOODY MIXED --> Jonathan's RIDs
 # Transforming any value greater than 0 to 1 in the 'baseline' column of zonal_woody_treat
@@ -401,7 +347,7 @@ woody_mixed$time <- time_repeated
 woody_mixed$baseline <- NA
 not_in_zonal <- c()
 # Iterate through each row using a for loop
-for (i in 338124:nrow(woody_mixed)) {
+for (i in 1:nrow(woody_mixed)) {
   row <- woody_mixed[i, ]  # Access current row
   # Check if RID exists in zonal_woody_treat
   if (row$RID %in% zonal_woody_treat$RID) {
@@ -425,10 +371,10 @@ for (i in 338124:nrow(woody_mixed)) {
   }
 }
 
-write_rds(woody_mixed, "input/joined_data_frames/woody_mixed_df_baseline_only.rds")
+write_rds(woody_mixed, "R:/nsw_habitat_loss/for_brooke/input/joined_data_frames/woody_mixed_df_baseline_only.rds")
 # Remove duplicates
 unique_not_in_zonal <- unique(not_in_zonal)
-write_rds(unique_not_in_zonal, "input/joined_data_frames/unique_not_in_zonal_woody_mixed.rds")
+write_rds(unique_not_in_zonal, "R:/nsw_habitat_loss/for_brooke/input/joined_data_frames/joined_data_frames/unique_not_in_zonal_woody_mixed.rds")
 # Remove rows where RID matches values in unique_not_in_zonal
 woody_mixed <- woody_mixed %>%
   filter(!RID %in% unique_not_in_zonal)
@@ -446,20 +392,20 @@ for (x in unique(woody_mixed$RID)) {
   joined <- c(last_11_values_treat, last_11_values_contr)
   woody_mixed$loss[woody_mixed$RID == x] <- joined
 }
-write_rds(woody_mixed, "input/joined_data_frames/woody_mixed_df.rds")
+write_rds(woody_mixed, "R:/nsw_habitat_loss/for_brooke/input/joined_data_frames/woody_mixed_df.rds")
 
 
 #KHAB MATCHED
 khab_matched <- data.frame(
-  RID = matched_mixed_RIDs$khab_matched[,1],
-  CI = matched_mixed_RIDs$khab_matched[,2]
+  RID = matched_samples_koala$RID,
+  CI = matched_samples_koala$CI
 )
 
 khab_matched <- data.frame()
 
-RID_repeated <- rep(matched_mixed_RIDs$khab_matched[,1], each = 11)
+RID_repeated <- rep(matched_samples_koala$RID, each = 11)
 RID_rep <- unlist(RID_repeated, use.names = FALSE)
-CI_repeated <- rep(matched_mixed_RIDs$khab_matched[,2], each = 11)
+CI_repeated <- rep(matched_samples_koala$CI, each = 11)
 CI_rep <- unlist(CI_repeated, use.names = FALSE)
 
 # Add columns RID and CI from matched_mixed_RIDs to woody_matched
@@ -533,7 +479,7 @@ for (x in unique(khab_matched$RID)) {
   }
 }
 
-write_rds(khab_matched, "input/joined_data_frames/khab_matched_df.rds")
+write_rds(khab_matched, "R:/nsw_habitat_loss/for_brooke/input/joined_data_frames/khab_matched_df.rds")
 
 
 
@@ -599,11 +545,11 @@ for (i in 1:nrow(khab_mixed)) {
     not_in_zonal <- c(not_in_zonal, row$RID)
   }
 }
-write_rds(khab_mixed, "input/joined_data_frames/khab_mixed_df_baseline_only.rds")
+write_rds(khab_mixed, "R:/nsw_habitat_loss/for_brooke/input/joined_data_frames/khab_mixed_df_baseline_only.rds")
 
 # Remove duplicates
 unique_not_in_zonal <- unique(not_in_zonal)
-write_rds(unique_not_in_zonal, "input/joined_data_frames/unique_not_in_zonal_khab_mixed.rds")
+write_rds(unique_not_in_zonal, "R:/nsw_habitat_loss/for_brooke/input/joined_data_frames/joined_data_frames/unique_not_in_zonal_khab_mixed.rds")
 
 # Remove rows where RID matches values in unique_not_in_zonal
 khab_mixed <- khab_mixed %>%
@@ -624,6 +570,6 @@ for (x in unique(khab_mixed$RID)) {
   joined <- c(last_11_values_treat, last_11_values_contr)
   khab_mixed$loss[khab_mixed$RID == x] <- joined
 }
-write_rds(khab_mixed, "input/joined_data_frames/khab_mixed_df.rds")
+write_rds(khab_mixed, "R:/nsw_habitat_loss/for_brooke/input/joined_data_frames/khab_mixed_df.rds")
 
 
