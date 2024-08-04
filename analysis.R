@@ -7,27 +7,144 @@ library(parallel)
 # read functions
 source("functions.R")
 
-# fit models to all woody vegetation data for separated properties
+# fit models to matched woody vegetation data
 
-# load data
-Data1 <- as_tibble(read.dbf("input/matched_mixed_properties/match_BACI.dbf")) %>% mutate(LOSS_count = ifelse(LOSS_count > FOREST_cou, FOREST_cou, LOSS_count))
-
-Data1 <- as_tibble(read.dbf("input/matched_mixed_properties/BACItime_v2.dbf")) %>% mutate(LOSS_count = ifelse(LOSS_count > FOREST_cou, FOREST_cou, LOSS_count))
-
-# fit models to all woody vegetation data for separated properties
+# load data and add BA field
+# format data fields
+Data_Matched_Woody <- as_tibble(readRDS("input/joined_data_frames/woody_matched_df.rds")) %>% mutate(ba = ifelse(time < 0, 0, 1)) %>% rename(ci = CI) %>% mutate(RID = as.integer(RID), baseline = as.integer(baseline), loss = as.integer(loss), time = as.integer(time), ba = as.factor(ba), ci = as.factor(ci))
 
 # fit model
 # binomial generalised linear model with counts of cells cleared as the dependent variable,
-# a random-effect for property ID to control dependence in data points within properties
+# a random-effect for RID to control dependence in data points within properties
 # and over-dispersion
 # this is a LOSS ~ TIME + BA + CI + (BA * CI) + (BA * TIME) + (CI * TIME) + (BA * CI * TIME) model
-Model1 <- inla(LOSS_count ~ TIME + BA + CI + BA:CI + BA:TIME + CI:TIME + BA:CI:TIME + f(RID, model = "iid"), data = Data1, family = "binomial", Ntrials = FOREST_cou)
-
-# get summary and statistical significance
-Summary_Model1 <- summary(Model1)$fixed
+Model_Matched_Woody <- inla(loss ~ time + ba + ci + ba:ci + ba:time + ci:time + ba:ci:time + f(RID, model = "iid"), data = Data_Matched_Woody, family = "betabinomial", Ntrials = baseline)
 
 # save the model object as an RDS file
-saveRDS(Model1, file = "output/Model1.rds")
+saveRDS(Model_Matched_Woody, file = "output/model_matched_woody.rds")
+
+# get summary and statistical significance
+Summary_Model_Matched_Woody <- summary(Model_Matched_Woody)$fixed
+
+# fit models to matched koala habitat data
+
+# load data and add BA field
+# format data fields
+Data_Matched_Koala <- as_tibble(readRDS("input/joined_data_frames/khab_matched_df.rds")) %>% mutate(ba = ifelse(time < 0, 0, 1)) %>% rename(ci = CI) %>% mutate(RID = as.integer(RID), baseline = as.integer(baseline), loss = as.integer(loss), time = as.integer(time), ba = as.factor(ba), ci = as.factor(ci))
+
+# fit model
+# binomial generalised linear model with counts of cells cleared as the dependent variable,
+# a random-effect for RID to control dependence in data points within properties
+# and over-dispersion
+# this is a LOSS ~ TIME + BA + CI + (BA * CI) + (BA * TIME) + (CI * TIME) + (BA * CI * TIME) model
+Model_Matched_Koala <- inla(loss ~ time + ba + ci + ba:ci + ba:time + ci:time + ba:ci:time + f(RID, model = "iid"), data = Data_Matched_Koala, family = "betabinomial", Ntrials = baseline)
+
+# save the model object as an RDS file
+saveRDS(Model_Matched_Koala, file = "output/model_matched_koala.rds")
+
+# get summary and statistical significance
+Summary_Model_Matched_Koala <- summary(Model_Matched_Koala)$fixed
+
+# fit models to mixed woody vegetation data
+
+# load data and add BA field
+# format data fields
+Data_Mixed_Woody <- as_tibble(readRDS("input/joined_data_frames/woody_mixed_df.rds")) %>% mutate(ba = ifelse(time < 0, 0, 1)) %>% rename(ci = CI) %>% mutate(RID = as.integer(RID), baseline = as.integer(baseline), loss = as.integer(loss), time = as.integer(time), ba = as.factor(ba), ci = as.factor(ci))
+
+# randomly select 100,000 properties without replacement
+Data_Mixed_Woody_Sub <- randomise(Data = Data_Mixed_Woody, N = 100000, Reps = 1)
+
+# fit model
+# binomial generalised linear model with counts of cells cleared as the dependent variable,
+# a random-effect for RID to control dependence in data points within properties
+# and over-dispersion
+# this is a LOSS ~ TIME + BA + CI + (BA * CI) + (BA * TIME) + (CI * TIME) + (BA * CI * TIME) model
+Model_Mixed_Woody <- inla(loss ~ time + ba + ci + ba:ci + ba:time + ci:time + ba:ci:time + f(RID, model = "iid"), data = Data_Mixed_Woody_Sub[[1]], family = "betabinomial", Ntrials = baseline)
+
+# save the model object as an RDS file
+saveRDS(Model_Mixed_Woody, file = "output/model_mixed_woody.rds")
+
+# get summary and statistical significance
+Summary_Model_Mixed_Woody <- summary(Model_Mixed_Woody)$fixed
+
+# fit models to mixed koala habitat data
+
+# load data and add BA field
+# format data fields
+Data_Mixed_Koala <- as_tibble(readRDS("input/joined_data_frames/khab_mixed_df.rds")) %>% mutate(ba = ifelse(time < 0, 0, 1)) %>% rename(ci = CI) %>% mutate(RID = as.integer(RID), baseline = as.integer(baseline), loss = as.integer(loss), time = as.integer(time), ba = as.factor(ba), ci = as.factor(ci))
+
+# randomly select 100,000 properties without replacement
+Data_Mixed_Koala_Sub <- randomise(Data = Data_Mixed_Koala, N = 100000, Reps = 1)
+
+# fit model
+# binomial generalised linear model with counts of cells cleared as the dependent variable,
+# a random-effect for RID to control dependence in data points within properties
+# and over-dispersion
+# this is a LOSS ~ TIME + BA + CI + (BA * CI) + (BA * TIME) + (CI * TIME) + (BA * CI * TIME) model
+Model_Mixed_Koala <- inla(loss ~ time + ba + ci + ba:ci + ba:time + ci:time + ba:ci:time + f(RID, model = "iid"), data = Data_Mixed_Koala_Sub[[1]], family = "betabinomial", Ntrials = baseline)
+
+# save the model object as an RDS file
+saveRDS(Model_Mixed_Koala, file = "output/model_mixed_koala.rds")
+
+# get summary and statistical significance
+Summary_Model_Mixed_Koala <- summary(Model_Mixed_Koala)$fixed
+
+# create some plots
+
+# immediate effect matched
+
+Coeff_Effects <- as_tibble(cbind(Type = c("Woody Vegetation", "Koala Habitat"), Est = c(Summary_Model_Matched_Woody["ba1:ci1", "mean"], Summary_Model_Matched_Koala["ba1:ci1", "mean"]), Lower = c(Summary_Model_Matched_Woody["ba1:ci1", "0.025quant"], Summary_Model_Matched_Koala["ba1:ci1", "0.025quant"]), Upper = c(Summary_Model_Matched_Woody["ba1:ci1", "0.975quant"], Summary_Model_Matched_Koala["ba1:ci1", "0.975quant"])))
+Coeff_Effects <- Coeff_Effects %>% mutate(Est = as.numeric(Est), Lower = as.numeric(Lower), Upper = as.numeric(Upper)) %>% mutate(Type = as.factor(Type)) %>% mutate(Type = relevel(Type, "Woody Vegetation")) %>% group_by(Type)
+
+Plot <- ggplot(Coeff_Effects, aes(x = Type, y = Est, fill = Type)) +
+  geom_bar(stat = "identity", position = "dodge", width = 0.7, color = "black") + geom_errorbar(aes(ymin = Lower, ymax = Upper), position = position_dodge(width = 0.7), width = 0.25) + labs(x = "Vegetation Type", y = "Effect Size") + theme_minimal() + theme(legend.position = "none", axis.text = element_text(size = 20),  axis.title.y = element_text(size = 20), axis.title.x = element_text(size = 20, vjust = -1)) + geom_hline(yintercept = 0, linetype = "solid", color = "black") + theme(plot.margin = margin(b = 0.5, unit = "cm"))
+
+ggsave(Plot, file = "output/figures/immediate_effects_matched.jpg", width = 20, height = 25, units = "cm", dpi = 300)
+
+# trend effect matched
+
+Coeff_Effects <- as_tibble(cbind(Type = c("Woody Vegetation", "Koala Habitat"), Est = c(Summary_Model_Matched_Woody["time:ba1:ci1", "mean"], Summary_Model_Matched_Koala["time:ba1:ci1", "mean"]), Lower = c(Summary_Model_Matched_Woody["time:ba1:ci1", "0.025quant"], Summary_Model_Matched_Koala["time:ba1:ci1", "0.025quant"]), Upper = c(Summary_Model_Matched_Woody["time:ba1:ci1", "0.975quant"], Summary_Model_Matched_Koala["ba1:ci1", "0.975quant"])))
+Coeff_Effects <- Coeff_Effects %>% mutate(Est = as.numeric(Est), Lower = as.numeric(Lower), Upper = as.numeric(Upper)) %>% mutate(Type = as.factor(Type)) %>% mutate(Type = relevel(Type, "Woody Vegetation")) %>% group_by(Type)
+
+Plot <- ggplot(Coeff_Effects, aes(x = Type, y = Est, fill = Type)) +
+  geom_bar(stat = "identity", position = "dodge", width = 0.7, color = "black") + geom_errorbar(aes(ymin = Lower, ymax = Upper), position = position_dodge(width = 0.7), width = 0.25) + labs(x = "Vegetation Type", y = "Effect Size") + theme_minimal() + theme(legend.position = "none", axis.text = element_text(size = 20),  axis.title.y = element_text(size = 20), axis.title.x = element_text(size = 20, vjust = -1)) + geom_hline(yintercept = 0, linetype = "solid", color = "black") + theme(plot.margin = margin(b = 0.5, unit = "cm"))
+
+ggsave(Plot, file = "output/figures/trend_effects_matched.jpg", width = 20, height = 25, units = "cm", dpi = 300)
+
+# immediate effect mixed
+
+Coeff_Effects <- as_tibble(cbind(Type = c("Woody Vegetation", "Koala Habitat"), Est = c(Summary_Model_Mixed_Woody["ba1:ci1", "mean"], Summary_Model_Mixed_Koala["ba1:ci1", "mean"]), Lower = c(Summary_Model_Mixed_Woody["ba1:ci1", "0.025quant"], Summary_Model_Mixed_Koala["ba1:ci1", "0.025quant"]), Upper = c(Summary_Model_Mixed_Woody["ba1:ci1", "0.975quant"], Summary_Model_Mixed_Koala["ba1:ci1", "0.975quant"])))
+Coeff_Effects <- Coeff_Effects %>% mutate(Est = as.numeric(Est), Lower = as.numeric(Lower), Upper = as.numeric(Upper)) %>% mutate(Type = as.factor(Type)) %>% mutate(Type = relevel(Type, "Woody Vegetation")) %>% group_by(Type)
+
+Plot <- ggplot(Coeff_Effects, aes(x = Type, y = Est, fill = Type)) +
+  geom_bar(stat = "identity", position = "dodge", width = 0.7, color = "black") + geom_errorbar(aes(ymin = Lower, ymax = Upper), position = position_dodge(width = 0.7), width = 0.25) + labs(x = "Vegetation Type", y = "Effect Size") + theme_minimal() + theme(legend.position = "none", axis.text = element_text(size = 20),  axis.title.y = element_text(size = 20), axis.title.x = element_text(size = 20, vjust = -1)) + geom_hline(yintercept = 0, linetype = "solid", color = "black") + theme(plot.margin = margin(b = 0.5, unit = "cm"))
+
+ggsave(Plot, file = "output/figures/immediate_effects_mixed.jpg", width = 20, height = 25, units = "cm", dpi = 300)
+
+# trend effect mixed
+
+Coeff_Effects <- as_tibble(cbind(Type = c("Woody Vegetation", "Koala Habitat"), Est = c(Summary_Model_Mixed_Woody["time:ba1:ci1", "mean"], Summary_Model_Mixed_Koala["time:ba1:ci1", "mean"]), Lower = c(Summary_Model_Mixed_Woody["time:ba1:ci1", "0.025quant"], Summary_Model_Mixed_Koala["time:ba1:ci1", "0.025quant"]), Upper = c(Summary_Model_Mixed_Woody["time:ba1:ci1", "0.975quant"], Summary_Model_Mixed_Koala["ba1:ci1", "0.975quant"])))
+Coeff_Effects <- Coeff_Effects %>% mutate(Est = as.numeric(Est), Lower = as.numeric(Lower), Upper = as.numeric(Upper)) %>% mutate(Type = as.factor(Type)) %>% mutate(Type = relevel(Type, "Woody Vegetation")) %>% group_by(Type)
+
+Plot <- ggplot(Coeff_Effects, aes(x = Type, y = Est, fill = Type)) +
+  geom_bar(stat = "identity", position = "dodge", width = 0.7, color = "black") + geom_errorbar(aes(ymin = Lower, ymax = Upper), position = position_dodge(width = 0.7), width = 0.25) + labs(x = "Vegetation Type", y = "Effect Size") + theme_minimal() + theme(legend.position = "none", axis.text = element_text(size = 20),  axis.title.y = element_text(size = 20), axis.title.x = element_text(size = 20, vjust = -1)) + geom_hline(yintercept = 0, linetype = "solid", color = "black") + theme(plot.margin = margin(b = 0.5, unit = "cm"))
+
+ggsave(Plot, file = "output/figures/trend_effects_mixed.jpg", width = 20, height = 25, units = "cm", dpi = 300)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # fit models to koala habitat for separated properties
 
