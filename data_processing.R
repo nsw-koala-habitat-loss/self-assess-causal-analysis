@@ -214,7 +214,8 @@ write.dbf(as.data.frame(matchingRIDs_woody), "input/analysis_data/matching_pool_
 write.dbf(as.data.frame(matchingRIDs_koala), "input/analysis_data/matching_pool_koala.dbf")
 
 # BROOKE TO WRITE CODE HERE TO GENERATE THE DATA FOR INPUT INTO THE STATISTICAL MODELS
-
+#Now this works
+setwd("R:/nsw_habitat_loss/for_brooke")
 #These are the files:
 # input/analysis_data/matched_mixed_RIDs.rds
 # input/analysis_data/matched_mixed_RIDs_old.rds
@@ -423,11 +424,11 @@ not_in_zonal <- c()
 for (i in 1:nrow(khab_matched)) {
   row <- khab_matched[i, ]  # Access current row
   # Check if RID exists in zonal_woody_treat
-  if (row$RID %in% zonal_woody_treat$RID) {
+  if (row$RID %in% zonal_koala_treat$RID) {
     # Perform actions if RID exist
     # Check if CI column value is 1
     if (row$CI == 1) {
-      row_treat <- zonal_woody_treat %>%
+      row_treat <- zonal_koala_treat %>%
         filter(RID == row$RID)
       khab_matched[i, 4] <- row_treat$baseline 
       # Add your actions here
@@ -464,12 +465,12 @@ khab_matched$loss <- NA
 for (x in unique(khab_matched$RID)) {
   row <- khab_matched %>% filter(RID == x)
   if (row$CI[1] == 1) {
-    subset_zonal_woody <- zonal_woody_treat %>% filter(RID == x)
+    subset_zonal_woody <- zonal_koala_treat %>% filter(RID == x)
     # Extract numerical values from the last 11 columns into a vector
     last_11_values <- as.vector(unlist(subset_zonal_woody[, -c(1:2)]))
     khab_matched$loss[khab_matched$RID == x] <- last_11_values
   } else {
-    subset_zonal_contr <- zonal_woody_contr %>% filter(RID == x)
+    subset_zonal_contr <- zonal_koala_contr %>% filter(RID == x)
     # Extract numerical values from the last 11 columns into a vector
     last_11_values <- as.vector(unlist(subset_zonal_contr[, -c(1:2)]))
     khab_matched$loss[khab_matched$RID == x] <- last_11_values
@@ -520,16 +521,16 @@ not_in_zonal <- c()
 for (i in 1:nrow(khab_mixed)) {
   row <- khab_mixed[i, ]  # Access current row
   # Check if RID exists in zonal_woody_treat
-  if (row$RID %in% zonal_woody_treat$RID) {
+  if (row$RID %in% zonal_koala_treat$RID) {
     # Perform actions if RID exist
     # Check if CI column value is 1
     if (row$CI == 1) {
-      row_treat <- zonal_woody_treat %>%
+      row_treat <- zonal_koala_treat %>%
         filter(RID == row$RID)
       khab_mixed[i, 4] <- row_treat$baseline 
       # Add your actions here
     } else {
-      row_contr <- zonal_woody_contr %>%
+      row_contr <- zonal_koala_contr %>%
         filter(RID == row$RID)
       khab_mixed[i, 4] <- row_contr$baseline
     }
@@ -556,10 +557,10 @@ khab_mixed$loss <- NA
 #Adding loss values
 for (x in unique(khab_mixed$RID)) {
   row <- khab_mixed %>% filter(RID == x)
-  subset_zonal_treat <- zonal_woody_treat %>% filter(RID == x)
+  subset_zonal_treat <- zonal_koala_treat %>% filter(RID == x)
   # Extract numerical values from the last 11 columns into a vector
   last_11_values_treat <- as.vector(unlist(subset_zonal_treat[, -c(1:2)]))
-  subset_zonal_contr <- zonal_woody_contr %>% filter(RID == x)
+  subset_zonal_contr <- zonal_koala_contr %>% filter(RID == x)
   # Extract numerical values from the last 11 columns into a vector
   last_11_values_contr <- as.vector(unlist(subset_zonal_contr[, -c(1:2)]))
   joined <- c(last_11_values_treat, last_11_values_contr)
