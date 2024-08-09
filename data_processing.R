@@ -213,15 +213,13 @@ write_rds(matchingRIDs_koala, "input/analysis_data/matching_pool_koala.rds")
 write.dbf(as.data.frame(matchingRIDs_woody), "input/analysis_data/matching_pool_woody.dbf")
 write.dbf(as.data.frame(matchingRIDs_koala), "input/analysis_data/matching_pool_koala.dbf")
 
-# BROOKE TO WRITE CODE HERE TO GENERATE THE DATA FOR INPUT INTO THE STATISTICAL MODELS
-#Now this works
-setwd("R:/nsw_habitat_loss/for_brooke")
-#These are the files:
-# input/analysis_data/matched_mixed_RIDs.rds
-# input/analysis_data/matched_mixed_RIDs_old.rds
-# These are the RIDs for Courtney’s matched and mixed samples – with the CI variable also included in the match data (use this for the CI variable – already switched the 0s and 1s so not need to do that).
+# do the matching
 
-#Load data
+# TO ADD COURTNEY'S CODE HERE
+
+# set up data for the statistical analysis
+
+# Load data
 matched_samples_woody <- read.dbf("input/analysis_data/matched_samples_woody.dbf")
 matched_samples_koala <- read.dbf("input/analysis_data/matched_samples_koala.dbf")
 
