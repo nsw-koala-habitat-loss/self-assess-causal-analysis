@@ -80,31 +80,7 @@ Model_Mixed_Koala <- inla(loss ~ time + ba + ci + ba:ci + ba:time + ci:time + ba
 # save the model object as an RDS file
 saveRDS(Model_Mixed_Koala, file = "output/model_mixed_koala_new.rds")
 
-# get the p-values
-
-# load models if needed
-Model_Matched_Woody <- readRDS("output/model_matched_woody.rds")
-Model_Matched_Koala <- readRDS("output/model_matched_koala.rds")
-Model_Mixed_Woody <- readRDS("output/model_mixed_woody.rds")
-Model_Mixed_Koala <- readRDS("output/model_mixed_koala.rds")
-
-print("Matched Woody")
-inla.pmarginal(0, Model_Matched_Woody$marginals.fixed$`ba1:ci1`)
-inla.pmarginal(0, Model_Matched_Woody$marginals.fixed$`time:ba1:ci1`)
-
-print("Matched Koala")
-inla.pmarginal(0, Model_Matched_Koala$marginals.fixed$`ba1:ci1`)
-inla.pmarginal(0, Model_Matched_Koala$marginals.fixed$`time:ba1:ci1`)
-
-print("Mixed Woody")
-inla.pmarginal(0, Model_Mixed_Woody$marginals.fixed$`ba1:ci1`)
-inla.pmarginal(0, Model_Mixed_Woody$marginals.fixed$`time:ba1:ci1`)
-
-print("Mixed Koala")
-inla.pmarginal(0, Model_Mixed_Koala$marginals.fixed$`ba1:ci1`)
-inla.pmarginal(0, Model_Mixed_Koala$marginals.fixed$`time:ba1:ci1`)
-
-# do the predictions
+# do the model summarise and predictions
 
 # load models if needed
 Model_Matched_Woody <- readRDS("output/model_matched_woody.rds")
@@ -117,6 +93,28 @@ Summary_Model_Matched_Woody <- summary(Model_Matched_Woody)$fixed
 Summary_Model_Matched_Koala <- summary(Model_Matched_Koala)$fixed
 Summary_Model_Mixed_Woody <- summary(Model_Mixed_Woody)$fixed
 Summary_Model_Mixed_Koala <- summary(Model_Mixed_Koala)$fixed
+
+# get the p-values
+
+# load models if needed
+Model_Matched_Woody <- readRDS("output/model_matched_woody.rds")
+Model_Matched_Koala <- readRDS("output/model_matched_koala.rds")
+Model_Mixed_Woody <- readRDS("output/model_mixed_woody.rds")
+Model_Mixed_Koala <- readRDS("output/model_mixed_koala.rds")
+
+# print the p-values
+print("Matched Woody")
+inla.pmarginal(0, Model_Matched_Woody$marginals.fixed$`ba1:ci1`)
+inla.pmarginal(0, Model_Matched_Woody$marginals.fixed$`time:ba1:ci1`)
+print("Matched Koala")
+inla.pmarginal(0, Model_Matched_Koala$marginals.fixed$`ba1:ci1`)
+inla.pmarginal(0, Model_Matched_Koala$marginals.fixed$`time:ba1:ci1`)
+print("Mixed Woody")
+inla.pmarginal(0, Model_Mixed_Woody$marginals.fixed$`ba1:ci1`)
+inla.pmarginal(0, Model_Mixed_Woody$marginals.fixed$`time:ba1:ci1`)
+print("Mixed Koala")
+inla.pmarginal(0, Model_Mixed_Koala$marginals.fixed$`ba1:ci1`)
+inla.pmarginal(0, Model_Mixed_Koala$marginals.fixed$`time:ba1:ci1`)
 
 # get posterior samples
 # matched
@@ -171,6 +169,9 @@ Params <- cbind(Post_Matched_Woody_BACI, Post_Matched_Woody_BACITIME) %>% as.mat
 Matched_Woody_Effect_Ha <- apply(Params, MARGIN = 1, FUN = function(x) {get_area_effect(p, c, b, t, x)})
 Matched_Woody_Effect_Ha <- do.call("rbind", Matched_Woody_Effect_Ha)
 
+# save tibble
+saveRDS(Matched_Woody_Effect_Ha, "output/matched_woody_effect_ha.rds")
+
 # matched koala
 
 # get actual proportions cleared
@@ -191,6 +192,9 @@ Params <- cbind(Post_Matched_Koala_BACI, Post_Matched_Koala_BACITIME) %>% as.mat
 # get the predicted area effects 
 Matched_Koala_Effect_Ha <- apply(Params, MARGIN = 1, FUN = function(x) {get_area_effect(p, c, b, t, x)})
 Matched_Koala_Effect_Ha <- do.call("rbind", Matched_Koala_Effect_Ha)
+
+# save tibble
+saveRDS(Matched_Koala_Effect_Ha, "output/matched_koala_effect_ha.rds")
 
 # mixed woody
 
@@ -213,6 +217,9 @@ Params <- cbind(Post_Mixed_Woody_BACI, Post_Mixed_Woody_BACITIME) %>% as.matrix(
 Mixed_Woody_Effect_Ha <- apply(Params, MARGIN = 1, FUN = function(x) {get_area_effect(p, c, b, t, x)})
 Mixed_Woody_Effect_Ha <- do.call("rbind", Mixed_Woody_Effect_Ha)
 
+# save tibble
+saveRDS(Mixed_Woody_Effect_Ha, "output/mixed_woody_effect_ha.rds")
+
 # mixed koala
 
 # get actual proportions cleared
@@ -233,6 +240,17 @@ Params <- cbind(Post_Mixed_Koala_BACI, Post_Mixed_Koala_BACITIME) %>% as.matrix(
 # get the predicted area effects 
 Mixed_Koala_Effect_Ha <- apply(Params, MARGIN = 1, FUN = function(x) {get_area_effect(p, c, b, t, x)})
 Mixed_Koala_Effect_Ha <- do.call("rbind", Mixed_Koala_Effect_Ha)
+
+# save tibble
+saveRDS(Mixed_Koala_Effect_Ha, "output/mixed_koala_effect_ha.rds")
+
+# calculate the total effects
+
+# get effects sampled from the posterior if necessary
+Matched_Woody_Effect_Ha <- readRDS( "output/matched_woody_effect_ha.rds")
+Matched_Koala_Effect_Ha <- readRDS( "output/matched_koala_effect_ha.rds")
+Mixed_Woody_Effect_Ha <- readRDS( "output/mixed_woody_effect_ha.rds")
+Mixed_Koala_Effect_Ha <- readRDS( "output/mixed_koala_effect_ha.rds")
 
 # get the total amounts cleared
 Total_Woody <- Mixed_Woody_Effect_Ha + Matched_Woody_Effect_Ha
